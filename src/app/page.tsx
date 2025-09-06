@@ -126,7 +126,12 @@ type RecType = SpeechRecognition & {
 
 function getSpeechRecognition(): RecType | null {
   if (typeof window === "undefined") return null;
-  const W = window as any;
+  const W = window as Window & {
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+    mozSpeechRecognition?: new () => SpeechRecognition;
+    msSpeechRecognition?: new () => SpeechRecognition;
+  };
   const Ctor =
     W.SpeechRecognition ||
     W.webkitSpeechRecognition ||
