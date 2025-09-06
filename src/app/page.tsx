@@ -112,17 +112,7 @@ function countWord(
 
 // ---- Web Speech setup ----
 
-type RecType = SpeechRecognition & {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-  onresult: (e: SpeechRecognitionEvent) => void;
-  onend?: () => void;
-  onerror?: (e: SpeechRecognitionErrorEvent) => void;
-};
+type RecType = SpeechRecognition;
 
 function getSpeechRecognition(): RecType | null {
   if (typeof window === "undefined") return null;
