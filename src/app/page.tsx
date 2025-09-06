@@ -135,17 +135,18 @@ function getSpeechRecognition(): RecType | null {
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   if (isMobile) {
     // Mobile browsers often work better with these settings
     rec.continuous = false; // Mobile browsers often don't support continuous mode well
     rec.interimResults = false; // Disable interim results on mobile for better performance
+    rec.lang = "sr-RS"; // Keep Serbian for all mobile devices
   } else {
     rec.continuous = true;
     rec.interimResults = true;
+    rec.lang = "sr-RS";
   }
-
-  rec.lang = "sr-RS";
   return rec;
 }
 
@@ -153,6 +154,7 @@ export default function Page() {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   const [lang, setLang] = useState("sr-RS");
   const [target, setTarget] = useState("brate");
@@ -175,7 +177,9 @@ export default function Page() {
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsMobile(mobile);
+    setIsIOS(ios);
 
     return () => {
       try {
@@ -193,10 +197,13 @@ export default function Page() {
     const rec = recognitionRef.current;
     if (!rec) {
       console.error("Speech recognition not available");
+      alert("Speech recognition not supported on this device");
       return;
     }
 
     console.log("Starting speech recognition with language:", lang);
+    console.log("User agent:", navigator.userAgent);
+    console.log("Is mobile:", isMobile);
     setLiveInterim("");
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
@@ -228,6 +235,31 @@ export default function Page() {
 
     rec.onerror = (event) => {
       console.error("Speech recognition error:", event);
+      console.error("Error type:", event.error);
+      console.error("Error message:", event.message);
+
+      let errorMessage = "Speech recognition error: ";
+      switch (event.error) {
+        case "not-allowed":
+          errorMessage +=
+            "Microphone permission denied. Please allow microphone access in your browser settings.";
+          break;
+        case "no-speech":
+          errorMessage += "No speech detected. Please try speaking louder.";
+          break;
+        case "audio-capture":
+          errorMessage +=
+            "Microphone not available. Please check your microphone.";
+          break;
+        case "network":
+          errorMessage +=
+            "Network error. Please check your internet connection.";
+          break;
+        default:
+          errorMessage += event.error || "Unknown error";
+      }
+
+      alert(errorMessage);
       setListening(false);
     };
     rec.onend = () => {
@@ -337,6 +369,23 @@ export default function Page() {
           📱 <strong>Mobile Mode:</strong> Speech recognition will restart
           automatically after each phrase. Make sure to speak clearly and allow
           microphone permissions.
+        </div>
+      )}
+
+      {supported && isIOS && (
+        <div
+          style={{
+            padding: 12,
+            border: "1px solid #007AFF",
+            borderRadius: 8,
+            background: "#e6f3ff",
+            margin: "16px 0",
+          }}
+        >
+          🍎 <strong>iOS Mode:</strong> Using Serbian language. Say "brate"
+          clearly and make sure to allow microphone access when prompted. iOS
+          may have limited Serbian support, so speak clearly and pause between
+          words.
         </div>
       )}
 
