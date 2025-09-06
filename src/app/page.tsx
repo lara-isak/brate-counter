@@ -135,7 +135,7 @@ function getSpeechRecognition(): RecType | null {
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  // const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   if (isMobile) {
     // Mobile browsers often work better with these settings
@@ -292,7 +292,7 @@ export default function Page() {
     } catch (error) {
       console.error("Failed to start speech recognition:", error);
     }
-  }, [target, strictWord, allowStretch]);
+  }, [target, strictWord, allowStretch, isMobile, lang]);
 
   const stop = useCallback(() => {
     try {
@@ -382,10 +382,10 @@ export default function Page() {
             margin: "16px 0",
           }}
         >
-          🍎 <strong>iOS Mode:</strong> Using Serbian language. Say "brate"
-          clearly and make sure to allow microphone access when prompted. iOS
-          may have limited Serbian support, so speak clearly and pause between
-          words.
+          🍎 <strong>iOS Mode:</strong> Using Serbian language. Say
+          &quot;brate&quot; clearly and make sure to allow microphone access
+          when prompted. iOS may have limited Serbian support, so speak clearly
+          and pause between words.
         </div>
       )}
 
