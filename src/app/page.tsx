@@ -319,8 +319,8 @@ export default function Page() {
             margin: "16px 0",
           }}
         >
-          Your browser doesn't support the Web Speech API. Use Chrome/Edge, or
-          add a server fallback later.
+          Your browser doesn&apos;t support the Web Speech API. Use Chrome/Edge,
+          or add a server fallback later.
         </div>
       )}
 
