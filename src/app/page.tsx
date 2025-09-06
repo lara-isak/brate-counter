@@ -129,8 +129,22 @@ function getSpeechRecognition(): RecType | null {
     W.msSpeechRecognition;
   if (!Ctor) return null;
   const rec: RecType = new Ctor();
-  rec.continuous = true;
-  rec.interimResults = true;
+
+  // Mobile-specific settings
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+
+  if (isMobile) {
+    // Mobile browsers often work better with these settings
+    rec.continuous = false; // Mobile browsers often don't support continuous mode well
+    rec.interimResults = false; // Disable interim results on mobile for better performance
+  } else {
+    rec.continuous = true;
+    rec.interimResults = true;
+  }
+
   rec.lang = "sr-RS";
   return rec;
 }
@@ -138,6 +152,7 @@ function getSpeechRecognition(): RecType | null {
 export default function Page() {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [lang, setLang] = useState("sr-RS");
   const [target, setTarget] = useState("brate");
@@ -154,6 +169,14 @@ export default function Page() {
     const rec = getSpeechRecognition();
     setSupported(!!rec);
     recognitionRef.current = rec;
+
+    // Detect mobile device
+    const mobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+    setIsMobile(mobile);
+
     return () => {
       try {
         rec?.stop();
@@ -168,17 +191,23 @@ export default function Page() {
 
   const start = useCallback(() => {
     const rec = recognitionRef.current;
-    if (!rec) return;
+    if (!rec) {
+      console.error("Speech recognition not available");
+      return;
+    }
 
+    console.log("Starting speech recognition with language:", lang);
     setLiveInterim("");
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
+      console.log("Speech recognition result:", event);
       let interim = "";
       let finalized = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
         const text = res[0]?.transcript ?? "";
+        console.log(`Result ${i}: "${text}" (final: ${res.isFinal})`);
         if (res.isFinal) finalized += text + " ";
         else interim += text + " ";
       }
@@ -186,22 +215,51 @@ export default function Page() {
       setLiveInterim(interim.trim());
 
       if (finalized) {
+        console.log("Finalized text:", finalized);
         setFinalTranscript((prev) => (prev + " " + finalized).trim());
         const delta = countWord(finalized, target, {
           wholeWord: strictWord,
           allowStretch,
         });
+        console.log(`Counted ${delta} instances of "${target}"`);
         if (delta > 0) setCount((c) => c + delta);
       }
     };
 
-    rec.onerror = () => {};
-    rec.onend = () => setListening(false);
+    rec.onerror = (event) => {
+      console.error("Speech recognition error:", event);
+      setListening(false);
+    };
+    rec.onend = () => {
+      console.log("Speech recognition ended");
+      setListening(false);
+
+      // On mobile, restart recognition automatically for continuous listening
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+      if (isMobile && rec.continuous === false) {
+        // Restart after a short delay for mobile
+        setTimeout(() => {
+          try {
+            rec.start();
+            setListening(true);
+            console.log("Restarted speech recognition for mobile");
+          } catch (error) {
+            console.error("Failed to restart speech recognition:", error);
+          }
+        }, 100);
+      }
+    };
 
     try {
       rec.start();
       setListening(true);
-    } catch {}
+      console.log("Speech recognition started");
+    } catch (error) {
+      console.error("Failed to start speech recognition:", error);
+    }
   }, [target, strictWord, allowStretch]);
 
   const stop = useCallback(() => {
@@ -233,6 +291,7 @@ export default function Page() {
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
           gap: 12,
           marginBottom: 8,
         }}
@@ -260,8 +319,24 @@ export default function Page() {
             margin: "16px 0",
           }}
         >
-          Your browser doesn’t support the Web Speech API. Use Chrome/Edge, or
+          Your browser doesn't support the Web Speech API. Use Chrome/Edge, or
           add a server fallback later.
+        </div>
+      )}
+
+      {supported && isMobile && (
+        <div
+          style={{
+            padding: 12,
+            border: "1px solid #4CAF50",
+            borderRadius: 8,
+            background: "#e8f5e8",
+            margin: "16px 0",
+          }}
+        >
+          📱 <strong>Mobile Mode:</strong> Speech recognition will restart
+          automatically after each phrase. Make sure to speak clearly and allow
+          microphone permissions.
         </div>
       )}
 
